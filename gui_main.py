@@ -473,6 +473,8 @@ class SpikeCheckerController(object):
         Show view
         """
         self.view.show()
+        self.view.raise_()
+        self.view.activateWindow()
 
 
 class SpikeCheckerGUI(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
@@ -491,21 +493,14 @@ class SpikeCheckerGUI(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
     clear_all_clicked = QtCore.Signal()
     clear_results_clicked = QtCore.Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self):
         """
         Initialize
-
-        Args:
-            parent (QtWidgets.QWidget | None): parent widget
         """
-        if parent is None:
-            maya_main_window_ptr = omui.MQtUtil.mainWindow()
-            maya_main_window = wrapInstance(
-                int(maya_main_window_ptr), QtWidgets.QWidget
-            )
-            parent = maya_main_window
-
-        super().__init__(parent)
+        maya_main_window_ptr = omui.MQtUtil.mainWindow()
+        maya_main_window = wrapInstance(int(maya_main_window_ptr),
+                                        QtWidgets.QWidget)
+        super().__init__(maya_main_window)
 
         self._close_other_instances()
         self._load_ui()
