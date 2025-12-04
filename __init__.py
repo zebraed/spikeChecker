@@ -8,7 +8,7 @@ __all__ = ["showUI", "Reload"]
 
 def Reload():
     """
-    モジュール全体をリロードする
+    Reload all modules
     """
     import sys
     for k in list(sys.modules):

@@ -29,6 +29,54 @@
        </property>
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_framerange">
+          <item>
+           <widget class="QLabel" name="label_start">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
+            </property>
+            <property name="text">
+             <string>Srart Frame</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinBox_start"/>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_end">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
+            </property>
+            <property name="text">
+             <string>End Frame</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinBox_end"/>
+          </item>
+         </layout>
+        </item>
+        <item>
          <layout class="QHBoxLayout" name="horizontalLayout_node">
           <item>
            <widget class="QLineEdit" name="lineEdit_node">
@@ -80,6 +128,9 @@
         </item>
         <item>
          <widget class="QTableWidget" name="tableWidget_entry">
+          <property name="focusPolicy">
+           <enum>Qt::ClickFocus</enum>
+          </property>
           <property name="alternatingRowColors">
            <bool>true</bool>
           </property>
@@ -98,18 +149,14 @@
           </column>
          </widget>
         </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_scan">
+          <property name="text">
+           <string>Scan Scene Animations</string>
+          </property>
+         </widget>
+        </item>
        </layout>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_scan">
-     <item>
-      <widget class="QPushButton" name="pushButton_scan">
-       <property name="text">
-        <string>Scan animation in the scene</string>
-       </property>
       </widget>
      </item>
     </layout>
@@ -124,6 +171,9 @@
        <layout class="QHBoxLayout" name="horizontalLayout_results">
         <item>
          <widget class="QTreeWidget" name="treeWidget_results">
+          <property name="focusPolicy">
+           <enum>Qt::ClickFocus</enum>
+          </property>
           <column>
            <property name="text">
             <string>Node Attribute</string>

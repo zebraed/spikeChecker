@@ -24,10 +24,6 @@ from . import validators
 
 DIR_NAME = os.path.dirname(__file__)
 OPTIONVAR_KEY = "spikeChecker_settings"
-SETTINGS_FILE = os.path.join(
-    os.path.expanduser("~"),
-    ".spikeChecker_settings.json"
-)
 
 
 __all__ = ["showUI"]
@@ -203,7 +199,12 @@ class SpikeCheckerController(object):
         Connect signals and slots
         """
         # View -> Controller
-        self.view.scan_clicked.connect(self._on_scan_clicked)
+        self.view.scan_clicked.connect(
+            lambda: self._on_scan_clicked(
+                start_frame=int(self.view.ui.spinBox_start.value()),
+                end_frame=int(self.view.ui.spinBox_end.value())
+            )
+        )
         self.view.value_changed.connect(self._on_value_changed)
         self.view.add_node_clicked.connect(
             functools.partial(self._on_add_node_clicked)
@@ -222,18 +223,31 @@ class SpikeCheckerController(object):
         # Model -> View
         self.model.items_changed.connect(self._on_items_changed)
 
-    def _on_scan_clicked(self):
+    def _on_scan_clicked(self, start_frame, end_frame):
         """
         Scan button clicked
+
+        Args:
+            start_frame (int): start frame
+            end_frame (int): end frame
         """
         items = self.model.get_items()
         if not items:
             cmds.warning("No items to scan.")
             return
 
-        # get frame range
-        start_frame = int(cmds.playbackOptions(q=True, minTime=True))
-        end_frame = int(cmds.playbackOptions(q=True, maxTime=True))
+        # Fallback to playback range if not specified
+        if start_frame is None:
+            start_frame = int(cmds.playbackOptions(q=True, minTime=True))
+        if end_frame is None:
+            end_frame = int(cmds.playbackOptions(q=True, maxTime=True))
+
+        # Validate frame range
+        if start_frame > end_frame:
+            cmds.warning(
+                "Start frame must be less than or equal to end frame."
+            )
+            return
 
         node_attr_threshold_dict = {}
         for i_item in items:
@@ -251,6 +265,7 @@ class SpikeCheckerController(object):
             return
 
         print(f"Scanning {len(node_attr_threshold_dict)} attribute(s)...")
+        print(f"Scan Range: {start_frame} to {end_frame}")
         for attr, thresh in list(node_attr_threshold_dict.items())[:3]:
             print(f"  {attr}: threshold={thresh}")
         if len(node_attr_threshold_dict) > 3:
@@ -336,7 +351,7 @@ class SpikeCheckerController(object):
             if self.model.has_item(node_attr):
                 skipped_count += 1
                 continue
-            self.model.add_item(node_attr, value=0.0)
+            self.model.add_item(node_attr, value=1.0)
             added_count += 1
 
         if skipped_count > 0:
@@ -381,22 +396,21 @@ class SpikeCheckerController(object):
         for node in nodes:
             node_attr = f"{node}.{attr_name}"
 
-            # アトリビュートが存在するかチェック
             if not cmds.objExists(node_attr):
                 cmds.warning(f"Warning: {node_attr} does not exist. Skipping.")
                 invalid_count += 1
                 continue
 
-            # 重複チェック
+            # check duplicate
             if self.model.has_item(node_attr):
                 skipped_count += 1
                 continue
 
-            # デフォルトthresholdで追加
+            # add with default threshold
             self.model.add_item(node_attr, value=0.0)
             added_count += 1
 
-        # 結果を表示
+        # display results
         if added_count > 0:
             print(f"Added {added_count} node attribute(s).")
         if skipped_count > 0:
@@ -404,14 +418,14 @@ class SpikeCheckerController(object):
         if invalid_count > 0:
             cmds.warning(f"Skipped {invalid_count} invalid node attribute(s).")
 
-        # 入力欄をクリア
+        # clear input fields
         self.view.clear_input_fields()
 
     def _on_items_changed(self):
         """
         Items changed
         """
-        # ビューを更新
+        # update view
         self.view.clear_items()
         items = self.model.get_items()
         for i, item in enumerate(items):
@@ -468,7 +482,7 @@ class SpikeCheckerGUI(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
     object_name = "SpikeCheckerWindow_object"
     window_title = "Spike Checker"
 
-    # シグナル定義
+    # signals
     scan_clicked = QtCore.Signal()
     value_changed = QtCore.Signal(int, float)  # row index, value
     add_node_clicked = QtCore.Signal()
@@ -506,6 +520,8 @@ class SpikeCheckerGUI(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         except Exception:
             pass
 
+        self.set_framerange()
+
     def _close_other_instances(self):
         """
         Close other instances
@@ -532,13 +548,21 @@ class SpikeCheckerGUI(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         """
         self.setWindowTitle(self.window_title)
         self.setObjectName(self.object_name)
-        # テーブルの設定
+
+        start_spinbox = self.ui.spinBox_start
+        end_spinbox = self.ui.spinBox_end
+        start_spinbox.setMinimum(-999999)
+        start_spinbox.setMaximum(999999)
+        end_spinbox.setMinimum(-999999)
+        end_spinbox.setMaximum(999999)
+
+        # setting for scan tabel
         table = self.ui.tableWidget_entry
         table.setColumnCount(2)
         headers = ["Node Attribute", "Threshold"]
         table.setHorizontalHeaderLabels(headers)
 
-        # 列のリサイズモードを設定
+        # setting for column resize mode
         header = table.horizontalHeader()
         header.setStretchLastSection(False)
         header.setSectionsMovable(False)
@@ -551,7 +575,7 @@ class SpikeCheckerGUI(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
 
         table.setEditTriggers(
             QtWidgets.QAbstractItemView.NoEditTriggers
-        )  # セル直接編集は無効（ウィジェットで編集）
+        )  # disable cell direct edit (edit by widget)
         table.setSelectionBehavior(
             QtWidgets.QAbstractItemView.SelectRows
         )
@@ -559,22 +583,13 @@ class SpikeCheckerGUI(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
             QtWidgets.QAbstractItemView.ExtendedSelection
         )
 
-        # ツリーウィジェットの設定
+        # setting for results tree widget
         tree = self.ui.treeWidget_results
         tree.setHeaderLabels(["Node Attribute / Frame", "Info"])
         tree.setColumnWidth(0, 200)
         tree.setAlternatingRowColors(True)
 
-        # tree_header = tree.horizontalHeader()
-        # tree_header.setSectionResizeMode(
-        #     0, QtWidgets.QHeaderView.Interactive
-        # )
-        # tree_header.setSectionResizeMode(
-        #     1, QtWidgets.QHeaderView.Stretch
-        # )
-        # tree.setColumnWidth(0, 200)
-
-        # デバッグ用ダミーアイテム
+        # debug dummy items
         # self._add_debug_dummy_items()
 
         # set validators
@@ -821,7 +836,7 @@ class SpikeCheckerGUI(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
             lambda val, r=row: self.value_changed.emit(r, val)
         )
 
-        # スピンボックスがフォーカスを受け取ったら選択をクリア
+        # clear selection when spinbox gets focus
         spinbox.installEventFilter(self)
 
         table.setCellWidget(row, 1, spinbox)
@@ -913,6 +928,15 @@ class SpikeCheckerGUI(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         Clear scan results
         """
         self.ui.treeWidget_results.clear()
+
+    def set_framerange(self):
+        """
+        Set frame range
+        """
+        start_frame = int(cmds.playbackOptions(q=True, minTime=True))
+        end_frame = int(cmds.playbackOptions(q=True, maxTime=True))
+        self.ui.spinBox_start.setValue(start_frame)
+        self.ui.spinBox_end.setValue(end_frame)
 
     def _add_debug_dummy_items(self):
         """

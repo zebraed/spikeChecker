@@ -1,7 +1,15 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 # vim:fenc=utf-8
+"""
+Spike Checker
 
+Spike Checkerは、アニメーションされたリグのアトリビュートのスパイク値をチェックするツールです。
+アトリビュートの値が1Fの間に、任意のしきい値を超えて変化した場合にスパイクとして検出します。
+
+Spike Checker is a tool that checks for spikes in an attribute
+over a range of frames.
+"""
 from maya import cmds
 
 
