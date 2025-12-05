@@ -7,8 +7,10 @@ GUI module for spikeChecker
 import os
 import json
 import functools
+import platform
+import subprocess
 
-from Qt import QtWidgets, QtCore
+from Qt import QtWidgets, QtCore, QtGui
 from PySide2 import QtUiTools
 
 from shiboken2 import wrapInstance
@@ -503,6 +505,7 @@ class SpikeCheckerGUI(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         super().__init__(maya_main_window)
 
         self._close_other_instances()
+        self._menu_bar = None
         self._load_ui()
         self._setup_ui()
         self._create_connections()
@@ -543,6 +546,7 @@ class SpikeCheckerGUI(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         """
         self.setWindowTitle(self.window_title)
         self.setObjectName(self.object_name)
+        self._create_menu_bar(self.ui.horizontalLayout_check)
 
         start_spinbox = self.ui.spinBox_start
         end_spinbox = self.ui.spinBox_end
@@ -601,6 +605,7 @@ class SpikeCheckerGUI(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
         """
         Create connections between signals and slots
         """
+        self.ui.pushButton_set_range.clicked.connect(self._on_set_range_clicked)
         self.ui.pushButton_scan.clicked.connect(self.scan_clicked.emit)
         self.ui.pushButton_add_node.clicked.connect(
             self.add_node_clicked.emit
@@ -788,6 +793,12 @@ class SpikeCheckerGUI(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
             cmds.currentTime(frame)
             print(frame)
 
+    def _on_set_range_clicked(self):
+        """
+        Set range button clicked
+        """
+        self.set_framerange()
+
     def _on_register_button_clicked(self):
         """
         Register button clicked
@@ -949,6 +960,58 @@ class SpikeCheckerGUI(MayaQWidgetBaseMixin, QtWidgets.QMainWindow):
             ]
         }
         self.display_scan_results(dummy_data)
+
+    def _create_menu_bar(self, root_layout: QtWidgets.QBoxLayout):
+        """
+        Create menu bar
+
+        Args:
+            root_layout (QtWidgets.QBoxLayout): top level layout
+        """
+        menubar = QtWidgets.QMenuBar(self)
+        help_menu = menubar.addMenu("Help")
+
+        act_help = QtWidgets.QAction("Open Quick Start Document", self)
+        act_help.triggered.connect(self._open_document)
+        help_menu.addAction(act_help)
+
+        if hasattr(self, "setMenuBar"):
+            self.setMenuBar(menubar)
+        else:
+            root_layout.addWidget(menubar)
+        self._menu_bar = menubar
+
+    def _open_document(self):
+        """
+        Open Quick Start Document
+        """
+        try:
+            pdf_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                       "docs", "README.pdf"))
+            if not os.path.exists(pdf_path):
+                raise FileNotFoundError(pdf_path)
+
+            opened = False
+            try:
+                url = QtCore.QUrl.fromLocalFile(pdf_path)
+                opened = bool(QtGui.QDesktopServices.openUrl(url))
+            except Exception:
+                opened = False
+
+            if not opened:
+                if platform.system() == "Windows":
+                    try:
+                        os.startfile(pdf_path)  # type: ignore[attr-defined]
+                    except Exception:
+                        subprocess.Popen(["cmd", "/c", "start", "", pdf_path],
+                                         shell=True)
+                else:
+                    subprocess.Popen(["xdg-open", pdf_path])
+        except Exception:
+            cmds.warning(f"Failed to open Quick Start Document: {pdf_path}")
+        else:
+            print(f"Opened Quick Start Document: {pdf_path}")
+
 
 
 def showUI():
